@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://lpx1s5cjt7n1"]
+
+[ext_resource type="Script" uid="uid://c767c4gtsnljp" path="res://spawner.gd" id="1_yp5lu"]
+
+[node name="Spawner" type="Node3D" unique_id=1247588261]
+script = ExtResource("1_yp5lu")
+
+[node name="Slot" type="Node3D" parent="." unique_id=1421211578]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+metadata/_edit_group_ = true
+
+[node name="Debug" type="Label3D" parent="." unique_id=353114751]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+visible = false
+billboard = 1
+text = "Timer: "
+
+[node name="SpawnTimer" type="Timer" parent="." unique_id=1714921043]
+process_callback = 0
+wait_time = 3.0
+one_shot = true
+
+[connection signal="child_exiting_tree" from="Slot" to="." method="_on_slot_child_exiting_tree"]
+[connection signal="timeout" from="SpawnTimer" to="." method="_on_spawn_timer_timeout"]

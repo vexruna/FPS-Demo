@@ -1,0 +1,29 @@
+[gd_scene format=3 uid="uid://c3i8bg7neeq8d"]
+
+[ext_resource type="Script" uid="uid://dwclxju8nwwro" path="res://vase.gd" id="1_tvxo7"]
+[ext_resource type="Texture2D" uid="uid://v7h8amk343a1" path="res://Susan_Paley.png" id="1_y28lw"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_1nm8r"]
+height = 1.0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_xu70c"]
+albedo_texture = ExtResource("1_y28lw")
+uv1_scale = Vector3(1.885, 1.885, 1.885)
+uv1_offset = Vector3(0, 0.14, 0)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_1nm8r"]
+material = SubResource("StandardMaterial3D_xu70c")
+bottom_radius = 0.4
+height = 1.0
+
+[node name="IntactVase" type="RigidBody3D" unique_id=746602301]
+collision_layer = 4
+collision_mask = 15
+mass = 3.0
+script = ExtResource("1_tvxo7")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1880222465]
+shape = SubResource("CylinderShape3D_1nm8r")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1043832771]
+mesh = SubResource("CylinderMesh_1nm8r")

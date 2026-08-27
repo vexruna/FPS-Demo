@@ -1,0 +1,52 @@
+[gd_scene format=3 uid="uid://b6we1rr0vfwnj"]
+
+[ext_resource type="Environment" uid="uid://dtdju5wf7ovo8" path="res://wenv.tres" id="1_f3sb7"]
+
+[sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_1nm8r"]
+
+[sub_resource type="Gradient" id="Gradient_hqtel"]
+colors = PackedColorArray(0.19200352, 0.1424484, 0.05741389, 1, 0.35840422, 0.63050246, 0.2224144, 1)
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_i3pqv"]
+noise_type = 5
+fractal_type = 2
+domain_warp_enabled = true
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_onrkg"]
+width = 1024
+height = 1024
+noise = SubResource("FastNoiseLite_i3pqv")
+color_ramp = SubResource("Gradient_hqtel")
+seamless = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4flbx"]
+albedo_texture = SubResource("NoiseTexture2D_onrkg")
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_1nm8r"]
+material = SubResource("StandardMaterial3D_4flbx")
+size = Vector2(300, 300)
+
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_xu70c"]
+
+[node name="World" type="Node3D" unique_id=1808451632]
+
+[node name="GrassWorldBoundary" type="StaticBody3D" parent="." unique_id=377807993]
+collision_layer = 2
+collision_mask = 13
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GrassWorldBoundary" unique_id=1928210817]
+shape = SubResource("WorldBoundaryShape3D_1nm8r")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="GrassWorldBoundary" unique_id=582222874]
+mesh = SubResource("PlaneMesh_1nm8r")
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=158616069]
+transform = Transform3D(0.72714645, 0.4845507, -0.4862804, 0, 0.7083655, 0.70584583, 0.68648237, -0.5132533, 0.51508546, 0, 51.96901, 0)
+layers = 3
+light_color = Color(0.7909957, 0.89586824, 0.9224422, 1)
+light_energy = 0.3
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1198214554]
+environment = ExtResource("1_f3sb7")
+camera_attributes = SubResource("CameraAttributesPractical_xu70c")

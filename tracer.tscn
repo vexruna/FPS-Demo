@@ -1,0 +1,78 @@
+[gd_scene format=3 uid="uid://dnusgo483pi2y"]
+
+[ext_resource type="Script" uid="uid://dnm0fx31uh8b4" path="res://tracer.gd" id="1_yt2qg"]
+[ext_resource type="Texture2D" uid="uid://b1ckq2i3r4wpa" path="res://assets/circle.svg" id="2_hhrec"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hhrec"]
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+shading_mode = 0
+albedo_texture = ExtResource("2_hhrec")
+disable_receive_shadows = true
+billboard_mode = 1
+
+[sub_resource type="QuadMesh" id="QuadMesh_yt2qg"]
+material = SubResource("StandardMaterial3D_hhrec")
+size = Vector2(0.1, 0.1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_easxq"]
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+shading_mode = 0
+albedo_texture = ExtResource("2_hhrec")
+uv1_scale = Vector3(0.5, 1, 1)
+texture_repeat = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_1nm8r"]
+material = SubResource("StandardMaterial3D_easxq")
+size = Vector2(0.05, 0.05)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wwgdn"]
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+shading_mode = 0
+albedo_color = Color(1, 1, 1, 0.039215688)
+albedo_texture = ExtResource("2_hhrec")
+
+[sub_resource type="QuadMesh" id="QuadMesh_xu70c"]
+material = SubResource("StandardMaterial3D_wwgdn")
+size = Vector2(0.25, 0.25)
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1nm8r"]
+radius = 0.009
+height = 0.045
+
+[node name="Tracer" type="RigidBody3D" unique_id=796019963]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 0, 0, 0)
+collision_layer = 8
+collision_mask = 14
+gravity_scale = 0.0
+script = ExtResource("1_yt2qg")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=94131998]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("QuadMesh_yt2qg")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="MeshInstance3D" unique_id=1602791765]
+transform = Transform3D(-4.371139e-07, 0, 1, 0, 1, 0, -10, 0, -4.371139e-08, 0, 0, 0.25)
+mesh = SubResource("QuadMesh_1nm8r")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="MeshInstance3D" unique_id=790045329]
+transform = Transform3D(-4.371139e-07, 1, -4.371139e-08, 0, -4.371139e-08, -1, -10, -4.371139e-08, 1.9106855e-15, 0, 0, 0.25)
+mesh = SubResource("QuadMesh_1nm8r")
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="MeshInstance3D" unique_id=663138857]
+mesh = SubResource("QuadMesh_xu70c")
+
+[node name="Area3D" type="Area3D" parent="." unique_id=706965752]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D" unique_id=1633545312]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 0, 0, 0)
+shape = SubResource("CapsuleShape3D_1nm8r")
+
+[node name="OmniLight3D" type="OmniLight3D" parent="." unique_id=1374453226]
+
+[connection signal="body_entered" from="Area3D" to="." method="_on_area_3d_body_entered"]
