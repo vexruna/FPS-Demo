@@ -1,73 +1,328 @@
-name: Discord Notifications
+name: Discord GitHub Activity
 
 on:
   push:
     branches:
-      - "**"
+      - main
 
   pull_request:
     types:
       - opened
-      - closed
       - reopened
+      - closed
 
   issues:
     types:
       - opened
-      - closed
       - reopened
+      - closed
 
   release:
     types:
       - published
 
+  workflow_run:
+    workflows:
+      - "*"
+    types:
+      - completed
+
+permissions:
+  contents: read
+
 jobs:
-  discord:
+  notify:
+    # Don't notify about this notification workflow itself.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.name != 'Discord GitHub Activity'
+
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send notification to Discord
+      - name: Build Discord notification
+        id: notification
         env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           EVENT_NAME: ${{ github.event_name }}
           REPOSITORY: ${{ github.repository }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+
           ACTOR: ${{ github.actor }}
-          REF_NAME: ${{ github.ref_name }}
-          SHA: ${{ github.sha }}
-          SERVER_URL: ${{ github.server_url }}
+          ACTOR_URL: ${{ github.server_url }}/${{ github.actor }}
+          ACTOR_AVATAR: ${{ github.event.sender.avatar_url }}
+
+          BRANCH: ${{ github.ref_name }}
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+
+          COMMITS_JSON: ${{ toJSON(github.event.commits) }}
+
+          PR_ACTION: ${{ github.event.action }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_MERGED: ${{ github.event.pull_request.merged }}
+          PR_USER: ${{ github.event.pull_request.user.login }}
+
+          ISSUE_ACTION: ${{ github.event.action }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+
           RELEASE_NAME: ${{ github.event.release.name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
           RELEASE_URL: ${{ github.event.release.html_url }}
+
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          WORKFLOW_STATUS: ${{ github.event.workflow_run.conclusion }}
+          WORKFLOW_URL: ${{ github.event.workflow_run.html_url }}
+          WORKFLOW_BRANCH: ${{ github.event.workflow_run.head_branch }}
+
         run: |
+          set -euo pipefail
+
+          # --------------------------------------------------
+          # Defaults
+          # --------------------------------------------------
+
+          TITLE="GitHub Activity"
+          DESCRIPTION="New activity in **${REPOSITORY}**"
+          COLOR=5793266
+          URL="${REPO_URL}"
+          SHOULD_NOTIFY="true"
+
+          # --------------------------------------------------
+          # PUSH
+          # --------------------------------------------------
+
           if [ "$EVENT_NAME" = "push" ]; then
-            MESSAGE="🚀 **${ACTOR}** pushed changes to **${REPOSITORY}** on **${REF_NAME}**
-          🔗 ${SERVER_URL}/${REPOSITORY}/commit/${SHA}"
+
+            TITLE="🚀 Push to \`${BRANCH}\`"
+            COLOR=3066993
+            URL="${COMMIT_URL}"
+
+            COMMIT_COUNT=$(echo "$COMMITS_JSON" | jq 'length')
+
+            if [ "$COMMIT_COUNT" -eq 1 ]; then
+              DESCRIPTION="**${ACTOR}** pushed **1 commit** to \`${BRANCH}\`."
+
+            else
+              DESCRIPTION="**${ACTOR}** pushed **${COMMIT_COUNT} commits** to \`${BRANCH}\`."
+            fi
+
+            # Show up to 5 commit messages.
+            COMMIT_LIST=$(echo "$COMMITS_JSON" | jq -r '
+              .[:5]
+              | map(
+                  "• [" +
+                  (.id[0:7]) +
+                  "](" +
+                  .url +
+                  ") " +
+                  (.message | split("\n")[0])
+                )
+              | join("\n")
+            ')
+
+            if [ -n "$COMMIT_LIST" ]; then
+              DESCRIPTION="${DESCRIPTION}"$'\n\n'"${COMMIT_LIST}"
+            fi
+
+            if [ "$COMMIT_COUNT" -gt 5 ]; then
+              REMAINING=$((COMMIT_COUNT - 5))
+              DESCRIPTION="${DESCRIPTION}"$'\n'"_...and ${REMAINING} more._"
+            fi
+
+          # --------------------------------------------------
+          # PULL REQUEST
+          # --------------------------------------------------
 
           elif [ "$EVENT_NAME" = "pull_request" ]; then
-            MESSAGE="🔀 **Pull Request:** ${PR_TITLE}
-          👤 ${ACTOR}
-          🔗 ${PR_URL}"
+
+            TITLE="🔀 Pull request"
+
+            if [ "$PR_ACTION" = "opened" ]; then
+              TITLE="🔵 Pull request opened"
+              COLOR=3447003
+
+            elif [ "$PR_ACTION" = "reopened" ]; then
+              TITLE="🔄 Pull request reopened"
+              COLOR=16776960
+
+            elif [ "$PR_ACTION" = "closed" ] && [ "$PR_MERGED" = "true" ]; then
+              TITLE="🎉 Pull request merged"
+              COLOR=5763719
+
+            elif [ "$PR_ACTION" = "closed" ]; then
+              TITLE="🔴 Pull request closed"
+              COLOR=15548997
+            fi
+
+            DESCRIPTION="**${PR_TITLE}**"$'\n\n'"Pull request #${PR_NUMBER} by **${PR_USER}**."
+            URL="${PR_URL}"
+
+          # --------------------------------------------------
+          # ISSUES
+          # --------------------------------------------------
 
           elif [ "$EVENT_NAME" = "issues" ]; then
-            MESSAGE="🐛 **Issue:** ${ISSUE_TITLE}
-          👤 ${ACTOR}
-          🔗 ${ISSUE_URL}"
+
+            if [ "$ISSUE_ACTION" = "opened" ]; then
+              TITLE="🐛 Issue opened"
+              COLOR=15158332
+
+            elif [ "$ISSUE_ACTION" = "reopened" ]; then
+              TITLE="🔄 Issue reopened"
+              COLOR=16776960
+
+            elif [ "$ISSUE_ACTION" = "closed" ]; then
+              TITLE="✅ Issue closed"
+              COLOR=5763719
+            fi
+
+            DESCRIPTION="**${ISSUE_TITLE}**"$'\n\n'"Issue #${ISSUE_NUMBER} by **${ACTOR}**."
+            URL="${ISSUE_URL}"
+
+          # --------------------------------------------------
+          # RELEASE
+          # --------------------------------------------------
 
           elif [ "$EVENT_NAME" = "release" ]; then
-            MESSAGE="🎉 **New Release:** ${RELEASE_NAME}
-          👤 ${ACTOR}
-          🔗 ${RELEASE_URL}"
+
+            TITLE="🎉 New release published"
+            COLOR=10181046
+            URL="${RELEASE_URL}"
+
+            RELEASE_DISPLAY="${RELEASE_NAME}"
+
+            if [ -z "$RELEASE_DISPLAY" ]; then
+              RELEASE_DISPLAY="${RELEASE_TAG}"
+            fi
+
+            DESCRIPTION="**${RELEASE_DISPLAY}**"$'\n\n'"Tag: \`${RELEASE_TAG}\`"$'\n'"Published by **${ACTOR}**."
+
+          # --------------------------------------------------
+          # WORKFLOW RUN
+          # --------------------------------------------------
+
+          elif [ "$EVENT_NAME" = "workflow_run" ]; then
+
+            # Only notify for failures/cancellations.
+            if [ "$WORKFLOW_STATUS" = "failure" ]; then
+
+              TITLE="❌ GitHub Action failed"
+              COLOR=15548997
+
+            elif [ "$WORKFLOW_STATUS" = "cancelled" ]; then
+
+              TITLE="⚠️ GitHub Action cancelled"
+              COLOR=16776960
+
+            else
+
+              SHOULD_NOTIFY="false"
+
+            fi
+
+            if [ "$SHOULD_NOTIFY" = "true" ]; then
+              DESCRIPTION="**${WORKFLOW_NAME}**"$'\n\n'"Status: **${WORKFLOW_STATUS}**"$'\n'"Branch: \`${WORKFLOW_BRANCH}\`"
+              URL="${WORKFLOW_URL}"
+            fi
 
           else
-            MESSAGE="📢 **GitHub activity:** ${EVENT_NAME}
-          👤 ${ACTOR}
-          🔗 ${SERVER_URL}/${REPOSITORY}"
+            SHOULD_NOTIFY="false"
           fi
 
-          curl -H "Content-Type: application/json" \
+          # --------------------------------------------------
+          # Save outputs
+          # --------------------------------------------------
+
+          echo "should_notify=${SHOULD_NOTIFY}" >> "$GITHUB_OUTPUT"
+
+          if [ "$SHOULD_NOTIFY" = "true" ]; then
+            {
+              echo "title<<EOF"
+              echo "$TITLE"
+              echo "EOF"
+
+              echo "description<<EOF"
+              echo "$DESCRIPTION"
+              echo "EOF"
+
+              echo "url<<EOF"
+              echo "$URL"
+              echo "EOF"
+
+              echo "color=${COLOR}" >> "$GITHUB_OUTPUT"
+            }
+          fi
+
+      - name: Send Discord notification
+        if: steps.notification.outputs.should_notify == 'true'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+          TITLE: ${{ steps.notification.outputs.title }}
+          DESCRIPTION: ${{ steps.notification.outputs.description }}
+          URL: ${{ steps.notification.outputs.url }}
+          COLOR: ${{ steps.notification.outputs.color }}
+
+          REPOSITORY: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+          ACTOR_URL: ${{ github.server_url }}/${{ github.actor }}
+          ACTOR_AVATAR: ${{ github.event.sender.avatar_url }}
+
+        run: |
+          set -euo pipefail
+
+          jq -n \
+            --arg title "$TITLE" \
+            --arg description "$DESCRIPTION" \
+            --arg url "$URL" \
+            --arg repository "$REPOSITORY" \
+            --arg actor "$ACTOR" \
+            --arg actor_url "$ACTOR_URL" \
+            --arg actor_avatar "$ACTOR_AVATAR" \
+            --argjson color "$COLOR" \
+            '{
+              username: "GitHub",
+              avatar_url: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+              embeds: [
+                {
+                  title: $title,
+                  description: $description,
+                  url: $url,
+                  color: $color,
+                  author: {
+                    name: $actor,
+                    url: $actor_url,
+                    icon_url: $actor_avatar
+                  },
+                  fields: [
+                    {
+                      name: "📦 Repository",
+                      value: ("[`" + $repository + "`](" + $url + ")"),
+                      inline: true
+                    },
+                    {
+                      name: "👤 Activity by",
+                      value: ("[" + $actor + "](" + $actor_url + ")"),
+                      inline: true
+                    }
+                  ],
+                  footer: {
+                    text: "GitHub • GitHub Actions"
+                  },
+                  timestamp: (now | todateiso8601)
+                }
+              ]
+            }' > discord-payload.json
+        :
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            -H "Content-Type: application/json" \
             -X POST \
-            -d "$(jq -n --arg content "$MESSAGE" '{content: $content}')" \
+            --data @discord-payload.json \
             "$DISCORD_WEBHOOK_URL"
+
