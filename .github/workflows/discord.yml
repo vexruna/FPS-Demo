@@ -1,0 +1,73 @@
+name: Discord Notifications
+
+on:
+  push:
+    branches:
+      - "**"
+
+  pull_request:
+    types:
+      - opened
+      - closed
+      - reopened
+
+  issues:
+    types:
+      - opened
+      - closed
+      - reopened
+
+  release:
+    types:
+      - published
+
+jobs:
+  discord:
+    runs-on: github
+
+    steps:
+      - name: Send notification to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPOSITORY: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          SERVER_URL: ${{ github.server_url }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          RELEASE_NAME: ${{ github.event.release.name }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
+        run: |
+          if [ "$EVENT_NAME" = "push" ]; then
+            MESSAGE="🚀 **${ACTOR}** pushed changes to **${REPOSITORY}** on **${REF_NAME}**
+          🔗 ${SERVER_URL}/${REPOSITORY}/commit/${SHA}"
+
+          elif [ "$EVENT_NAME" = "pull_request" ]; then
+            MESSAGE="🔀 **Pull Request:** ${PR_TITLE}
+          👤 ${ACTOR}
+          🔗 ${PR_URL}"
+
+          elif [ "$EVENT_NAME" = "issues" ]; then
+            MESSAGE="🐛 **Issue:** ${ISSUE_TITLE}
+          👤 ${ACTOR}
+          🔗 ${ISSUE_URL}"
+
+          elif [ "$EVENT_NAME" = "release" ]; then
+            MESSAGE="🎉 **New Release:** ${RELEASE_NAME}
+          👤 ${ACTOR}
+          🔗 ${RELEASE_URL}"
+
+          else
+            MESSAGE="📢 **GitHub activity:** ${EVENT_NAME}
+          👤 ${ACTOR}
+          🔗 ${SERVER_URL}/${REPOSITORY}"
+          fi
+
+          curl -H "Content-Type: application/json" \
+            -X POST \
+            -d "$(jq -n --arg content "$MESSAGE" '{content: $content}')" \
+            "$DISCORD_WEBHOOK_URL"
