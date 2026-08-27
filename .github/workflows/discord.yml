@@ -316,7 +316,7 @@ jobs:
                 }
               ]
             }' > discord-payload.json
-        :
+
           curl \
             --fail \
             --silent \
