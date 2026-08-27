@@ -23,7 +23,7 @@ on:
 
 jobs:
   discord:
-    runs-on: github
+    runs-on: ubuntu-latest
 
     steps:
       - name: Send notification to Discord
