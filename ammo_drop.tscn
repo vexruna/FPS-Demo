@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://cav06ogj0opev"]
+
+[ext_resource type="Script" uid="uid://dbi26wngojpgc" path="res://ammo_drop.gd" id="1_edj2j"]
+
+[node name="Ammo Drop" type="Node3D" unique_id=1761285696]
+script = ExtResource("1_edj2j")

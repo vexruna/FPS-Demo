@@ -1,5 +1,13 @@
 extends Node3D
 var vase = preload("res://vase.tscn")
+var ammo_drop = preload("res://ammo_drop.tscn")
+@export var set_spawn : spawn_object
+
+enum spawn_object
+{
+	vase,
+	ammo_drop,
+}
 
 func _ready() -> void:
 	spawn_vase()
